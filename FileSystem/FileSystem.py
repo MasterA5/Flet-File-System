@@ -15,10 +15,10 @@ class FileSystem:
     Features:
     - Persistent and temporary storage support.
     - Automatic encryption/decryption using Fernet.
-    - JSON and plain-text file handling.
-    - File listing, editing, and deletion with safety checks.
+    - JSON, text, and binary file handling.
+    - File listing, editing, deletion, and searching with safety checks.
 
-    Environment variables required:
+    Environment variables:
     - FLET_APP_STORAGE_DATA
     - FLET_APP_STORAGE_TEMP
     """
@@ -31,7 +31,7 @@ class FileSystem:
         os.makedirs(self.storage_data, exist_ok=True)
         os.makedirs(self.storage_temp, exist_ok=True)
 
-        # Locate existing encryption keys
+        # Load existing encryption key if available
         existing_keys = [f for f in os.listdir(self.storage_temp) if f.endswith(".key")]
 
         if existing_keys:
@@ -40,7 +40,7 @@ class FileSystem:
             with open(key_path, "rb") as key_file:
                 self.key = key_file.read()
         else:
-            # Generate a new key and store it
+            # Generate a new key and save it
             key_file_name = f"{uuid.uuid4()}.key"
             key_path = os.path.join(self.storage_temp, key_file_name)
             self.key = Fernet.generate_key()
@@ -50,7 +50,7 @@ class FileSystem:
         self.cipher = Fernet(self.key)
 
     def _get_path(self, file_name: str, temp: bool = False) -> str:
-        """Return full path of a file in data or temp storage."""
+        """Return the full path of a file in data or temp storage."""
         base_path = self.storage_temp if temp else self.storage_data
         return os.path.join(base_path, file_name)
 
@@ -63,14 +63,14 @@ class FileSystem:
         encrypt: bool = False
     ) -> Union[str, bool]:
         """
-        Save file content into storage, supporting text, JSON, and binary files (images, audio, CSV, etc.).
+        Save file content to storage, supporting text, JSON, and binary files (images, audio, CSV, etc.).
 
         Parameters:
         - file_name: Name (and optionally path) of the file.
         - file_content: Content to write.
             * str → text file
             * dict/list → JSON file
-            * bytes → binary file (image, audio, CSV in bytes)
+            * bytes → binary file
         - temp: Save in temporary storage if True.
         - overwrite: Allow overwriting existing files.
         - encrypt: Encrypt contents using Fernet (works for text and bytes).
@@ -98,18 +98,17 @@ class FileSystem:
             # Encrypt if requested
             if encrypt:
                 if not is_binary:
-                    # Convert to bytes for text content
                     file_content = str(file_content).encode("utf-8")
                 encrypted_data = self.cipher.encrypt(file_content)
                 file_content = b"E::" + encrypted_data
-                is_binary = True  # Encrypted files always treated as binary
+                is_binary = True  # Encrypted files are always binary
 
             # Write file
             if is_binary:
                 with open(full_path, "wb") as f:
                     f.write(file_content)
             else:
-                # Text or JSON
+                # JSON or text
                 if isinstance(file_content, (dict, list)) or file_name.endswith(".json"):
                     file_content = json.dumps(file_content, indent=4, ensure_ascii=False)
                 else:
@@ -135,7 +134,7 @@ class FileSystem:
         - str for text files
         - dict/list for JSON files
         - bytes for binary files (including encrypted)
-        - Error message (str) if the file cannot be read
+        - Error message (str) if reading fails
         """
         file_path = self._get_path(file_name, temp)
 
@@ -160,7 +159,7 @@ class FileSystem:
                 with open(file_path, "r", encoding="utf-8") as f:
                     data = f.read()
 
-            # Check for encrypted content
+            # Decrypt if encrypted
             if isinstance(data, bytes):
                 if data.startswith(b"E::"):
                     decrypted = self.cipher.decrypt(data[3:])
@@ -171,19 +170,15 @@ class FileSystem:
                 if data.startswith("E::"):
                     decrypted = self.cipher.decrypt(data[3:].encode("utf-8"))
                     return decrypted.decode("utf-8")
-                # JSON support
                 if file_name.endswith(".json"):
                     return json.loads(data)
-                # Plain text
                 return data
 
         except Exception as e:
             return f"Error reading file: {e}"
 
     def delete_file(self, file_name: str, temp: bool = False) -> str:
-        """
-        Delete a file from storage.
-        """
+        """Delete a file from storage."""
         file_path = self._get_path(file_name, temp)
         if not os.path.exists(file_path):
             return "File not found"
@@ -201,23 +196,19 @@ class FileSystem:
         show_details: bool = False
     ) -> Union[List[str], Tuple[List[str], List[str]], str]:
         """
-        List all files in storage directories.
+        List files in storage directories.
 
         Parameters:
         - temp: List only temporary storage.
-        - list_both_directories: Return both data and temp storage contents.
-        - show_details: Show formatted string summary.
+        - list_both_directories: Return contents of both data and temp directories.
+        - show_details: Return a formatted summary string.
 
         Returns:
-        - List of file names, tuple, or formatted summary string.
+        - List of file names, tuple, or formatted string.
         """
         try:
-            data_storage_content = [
-                f for f in os.listdir(self.storage_data)
-            ]
-            temp_storage_content = [
-                f for f in os.listdir(self.storage_temp) if not f.endswith(".key")
-            ]
+            data_storage_content = [f for f in os.listdir(self.storage_data)]
+            temp_storage_content = [f for f in os.listdir(self.storage_temp) if not f.endswith(".key")]
 
             if not list_both_directories:
                 base_path = self.storage_temp if temp else self.storage_data
@@ -239,17 +230,13 @@ class FileSystem:
         return os.path.exists(self._get_path(file_name, temp))
 
     def edit_file(self, file_name: str, new_content: Any, temp: bool = False, encrypt: bool = False) -> str:
-        """
-        Edit a file by overwriting its content.
-        """
+        """Overwrite the content of an existing file."""
         if not self.file_exists(file_name, temp):
             return "File not found"
         return self.save_file(file_name, new_content, temp=temp, overwrite=True, encrypt=encrypt)
 
     def clear_storage(self, temp: bool = False) -> str:
-        """
-        Remove all files from the selected storage directory.
-        """
+        """Delete all files in the selected storage directory (except keys)."""
         base_path = self.storage_temp if temp else self.storage_data
         try:
             for file in os.listdir(base_path):
@@ -261,14 +248,14 @@ class FileSystem:
     
     def delete_folder(self, dir_name: str, temp: bool = False) -> str:
         """
-        Delete a folder and all its contents safely without affecting parent directories.
+        Delete a folder and all its contents safely.
 
         Parameters:
-        - dir_name: Name or relative path of the folder to delete.
-        - temp: If True, deletes from the temporary storage.
+        - dir_name: Name or relative path of the folder.
+        - temp: If True, delete from temporary storage.
 
         Returns:
-        - Message with operation result.
+        - Operation result message.
         """
         try:
             base_path = self.storage_temp if temp else self.storage_data
@@ -276,35 +263,30 @@ class FileSystem:
 
             if not os.path.exists(folder_path):
                 return f"❌ The folder '{dir_name}/' does not exist."
-
             if not os.path.isdir(folder_path):
                 return f"⚠️ '{dir_name}' is not a folder."
 
-            # 🔒 Delete only the target folder and its contents
             shutil.rmtree(folder_path)
-
             return f"🗑️ The folder '{dir_name}/' and all its contents were deleted successfully."
         except Exception as e:
             return f"Error deleting folder '{dir_name}/': {e}"
    
     def search_files(
         self, 
-        file_names: list[str],  # Ahora acepta lista de nombres
+        file_names: list[str],
         temp: bool = False, 
         search_in_any_folders: bool = False
     ) -> dict:
         """
-        Search for multiple files by name in the storage directory.
+        Search for multiple files by name in storage.
 
         Parameters:
         - file_names: List of file names (or partial names) to search for.
-        - temp: If True, search in temporary storage.
-        - search_in_any_folders: If True, search recursively in subfolders.
+        - temp: Search in temporary storage if True.
+        - search_in_any_folders: Search recursively in subfolders if True.
 
         Returns:
-        - Dictionary where keys are file names and values are lists of full paths,
-        or a string "File Not Found" if no matches are found.
-        Example: {"config.json": ["data/config.json"], "test.txt": "File Not Found"}
+        - Dict mapping each file name to a list of full paths or "File Not Found".
         """
         if not isinstance(file_names, list):
             file_names = [file_names]
@@ -325,7 +307,7 @@ class FileSystem:
                         if name.lower() in f.lower():
                             results[name].append(os.path.join(root, f))
 
-        # Reemplazar listas vacías por "File Not Found"
+        # Replace empty lists with "File Not Found"
         for name in results:
             if not results[name]:
                 results[name] = "File Not Found"
