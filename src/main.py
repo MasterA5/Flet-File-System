@@ -2,6 +2,7 @@ from FileSystem import FileSystem
 from flet import *
 import os
 
+# Example Use
 def main(page: Page):
     page.title = "Flet FileSystem Demo"
     page.vertical_alignment = "start"
@@ -48,18 +49,24 @@ def main(page: Page):
     # -----------------------------
     # Display all results in Flet UI
     page.add(
-        Column([
-            Text("✅ Files saved successfully!", size=18, weight="bold"),
-            Divider(),
-            Text(f"Text file content: {read_text}"),
-            Text(f"JSON file content: {read_json}"),
-            Divider(),
-            Text(list_text),
-            Divider(),
-            Text(f"Search Results: {search_results}"),
-            Divider(),
-            Text(f"Delete Message: {delete_message}"),
-        ], spacing=10)
+        SafeArea(
+            content=Column(
+                controls=[
+                    Text("✅ Files saved successfully!", size=18, weight="bold"),
+                    Divider(),
+                    Text(f"Text file content: {read_text}"),
+                    Text(f"JSON file content: {read_json}"),
+                    Divider(),
+                    Text(list_text),
+                    Divider(),
+                    Text(f"Search Results: {search_results}"),
+                    Divider(),
+                    Text(f"Delete Message: {delete_message}"),
+                ], 
+                spacing=10
+            ),
+            expand=True
+        )
     )
 
-app(target=main)
+app(target=main, assets_dir="assets")
