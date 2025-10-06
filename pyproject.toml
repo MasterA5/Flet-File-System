@@ -1,14 +1,15 @@
 [project]
 name = "fletfilesystem"
 version = "0.1.0"
-description = ""
+description = "A File System For Using With Flet"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
-  "flet==0.28.3"
+  "flet==0.28.3",
+  "cryptography"
 ]
 
 [tool.flet]
@@ -24,7 +25,7 @@ product = "fletfilesystem"
 company = "Flet"
 
 # copyright text to display in about app dialogs
-copyright = "Copyright (C) 2025 by Flet"
+copyright = "Copyright (C) 2025 by Aguss"
 
 [tool.flet.app]
 path = "src"
@@ -32,6 +33,7 @@ path = "src"
 [tool.uv]
 dev-dependencies = [
     "flet[all]==0.28.3",
+    "cryptography"
 ]
 
 [tool.poetry]
