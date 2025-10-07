@@ -32,6 +32,14 @@ Supports both **persistent** and **temporary** storage and works seamlessly with
 pip install cryptography flet[all]
 ```
 
+### ➕ Add To `pyproject.toml`
+```toml
+dependencies = [
+  "flet==0.28.3",
+  "cryptography" # <- Needed For Encrypt Files
+]
+```
+
 > **Note:** The `FileSystem` class can also be used standalone in non-Flet projects (requires `flet>=0.28.3`).
 
 ---
@@ -93,6 +101,17 @@ app(target=main)
 | `clear_storage()` | Delete all files from a directory safely.                             |
 
 ---
+
+## 🧪 Tested On
+
+| Platform  | Status |
+|-----------|---------|
+| Android   | ✅ |
+| Windows   | ✅ |
+| iOS       | ❌ |
+| macOS     | ❌ |
+| Linux     | ❌ |
+
 
 ## 🔐 Encryption
 
