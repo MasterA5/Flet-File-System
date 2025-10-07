@@ -9,7 +9,7 @@ authors = [
 ]
 dependencies = [
   "flet==0.28.3",
-  "cryptography"
+  "cryptography" # <- Needed For Encrypt Files
 ]
 
 [tool.flet]
@@ -33,7 +33,7 @@ path = "src"
 [tool.uv]
 dev-dependencies = [
     "flet[all]==0.28.3",
-    "cryptography"
+    "cryptography" # <- Needed For Encrypt Files
 ]
 
 [tool.poetry]
